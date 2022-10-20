@@ -5,6 +5,7 @@
     import type { IColumnProfileMap } from '../common/exchangeInterfaces';
 
     import DFProfile from './DFProfile.svelte';
+    import ProfileOrCompare from './ProfileOrCompare.svelte';
     import Parquet from './icons/Parquet.svelte';
     import { Circle } from 'svelte-loading-spinners';
 
@@ -81,10 +82,11 @@
 
             <div>
                 {#each Object.keys(columnProfiles) as dfName}
-                    <DFProfile
+                    <ProfileOrCompare
                         {dfName}
                         isInFocus={varsInCurrentCell.includes(dfName)}
                         dataframeProfile={columnProfiles[dfName]}
+                        {columnProfiles}
                     />
                 {/each}
             </div>
