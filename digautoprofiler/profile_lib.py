@@ -21,7 +21,7 @@ def getColumns(dfName: pd.DataFrame):
     typeDF = pd.concat([indexDF, typeDF])
     print(typeDF.to_json(orient="records", default_handler=str))
 
-def getShape(dfName: pd.DataFrame):
+def getShape(dfName: pd.DataFrame):    
     print(dfName.shape)
 
 def getVariableNamesInPythonStr(codeString: str):
