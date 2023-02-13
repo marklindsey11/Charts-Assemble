@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { createEventDispatcher } from 'svelte';
     import { slide } from 'svelte/transition';
     import ColumnEntry from './ColumnEntry.svelte';
     import DataTypeIcon from './data-types/DataTypeIcon.svelte';
@@ -21,6 +22,7 @@
         isBooleanSummary
     } from '../common/exchangeInterfaces';
     import { showIndex } from '../stores';
+    import AddVariable from './icons/AddVariable.svelte';
     import VizOrText from './fact-panel/VizOrStats.svelte';
 
     // props
@@ -33,6 +35,7 @@
     export let containerWidth: number;
     export let hideRight = false;
     export let isIndex = false;
+    export let showAddButton = false;
 
     // locals
     let active = false;
@@ -44,6 +47,12 @@
         containerWidth > config.compactBreakpoint
             ? formatInteger
             : formatCompactInteger;
+
+    // const dispatch = createEventDispatcher();
+
+    // function selectVariable(colName: string, type: string) {
+    //     dispatch('variable', { 'colName': colName, 'colType': type });
+    // }
 </script>
 
 {#if !isIndex || (isIndex && $showIndex)}
@@ -51,6 +60,14 @@
     <ColumnEntry {hideRight} bind:active hoverKey={colName} {dfName}>
         <svelte:fragment slot="icon">
             <Tooltip location="left" distance={16}>
+                <!-- <button
+                    style={showAddButton?"display: auto":"display: none"}
+                    on:click={() => {
+                        selectVariable(colName, type);
+                    }}
+                >
+                    <AddVariable />
+                </button> -->
                 <DataTypeIcon {type} />
 
                 <TooltipContent slot="tooltip-content">

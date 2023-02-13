@@ -8,7 +8,8 @@ import type {
     IDFProfileWStateMap,
     ColumnProfileData,
     IDFProfileWState,
-    IColTypeTuple
+    IColTypeTuple,
+    ValueCount
 } from '../common/exchangeInterfaces';
 import {
     NUMERICS,
@@ -18,6 +19,8 @@ import {
 } from '../components/data-types/pandas-data-types';
 import _ from 'lodash';
 import type { Logger } from '../logger/Logger';
+import { showIndex } from '../stores';
+import CategoricalType from '../components/icons/CategoricalType.svelte';
 
 export class ProfileModel {
 
@@ -276,6 +279,66 @@ export class ProfileModel {
         }
 
         return { profile: resultData, shape, dfName, lastUpdatedTime: Date.now(), isPinned: false, warnings: [] };
+    }
+
+    public async getBivariateData(
+        dfName: string,
+        colName1: string,
+        colType1: string,
+        colName2: string,
+        colType2: string,
+    ) {
+        let aggrData;
+        if (CATEGORICALS.has(colType1) && NUMERICS.has(colType2)) {
+            aggrData = {chartType: 'histogram', data: await this.getAggrData(dfName, colName1, colName2, "mean")};
+        }
+        else if(CATEGORICALS.has(colType2) && NUMERICS.has(colType1)){
+            aggrData = {chartType: 'histogram', data: await this.getAggrData(dfName, colName2, colName1, "mean")};
+        }
+        else if(TIMESTAMPS.has(colType1) && NUMERICS.has(colType2)){
+            aggrData = {chartType: 'linechart', data: await this.getTempAggrData(dfName,colName1,colName2,"mean")};
+        }
+        else if(TIMESTAMPS.has(colType2) && NUMERICS.has(colType1)){
+            aggrData = {chartType: 'linechart', data: await this.getTempAggrData(dfName,colName2,colName1,"mean")};
+        }
+        return aggrData;
+    }
+
+    private async getAggrData(
+        dfName: string,
+        catColName: string,
+        quantColName: string,
+        aggrType: string,
+        n = 10) {
+        const aggrData = await this.executor.getAggrData(dfName, catColName, quantColName, aggrType, n);
+
+        return aggrData;
+    }
+
+    private async getTempAggrData(
+        dfName: string,
+        tempColName: string,
+        quantColName: string,
+        aggrType: string,
+        n = 10
+    ){
+        const { timebin, histogram } = await this.executor.getTempAggrData(dfName,tempColName,quantColName,aggrType,n);
+        const interval = await this.executor.getTempInterval(dfName, tempColName, false);
+
+        const timeSummary: TimeColumnSummary = {
+            interval,
+            rollup: {
+                results: timebin,
+                spark: timebin,
+                timeRange: {
+                    start: timebin[0]?.ts_start,
+                    end: timebin[timebin.length - 1]?.ts_end,
+                    interval: interval
+                }
+            }
+        };
+        console.log(timeSummary);
+        return timeSummary;
     }
 
 }
