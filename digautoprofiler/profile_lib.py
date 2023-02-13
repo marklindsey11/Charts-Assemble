@@ -245,6 +245,20 @@ def getQuantMeta(colData: pd.Series):
 
     return statistics
 
+def getAggrData(dfName: pd.DataFrame, catColName: str, quantColName: str, aggrType: str="mean", n=10):
+    if aggrType == "mean":
+        aggrData = dfName[[catColName,quantColName]].groupby(catColName)[quantColName].mean().sort_values(ascending=True)[:n]
+    print(aggrData.to_json())
+    
+
+def getTempAggrData(dfName: pd.DataFrame, tempColName: str, quantColName: str, aggrType: str="mean", n=10):
+    intervals = (dfName[tempColName].astype("int64")//1e9).value_counts(bins=min(n,dfName[tempColName].nunique()),sort=False).index
+    indices = (dfName[tempColName].astype("int64")//1e9).apply(lambda x:[interval for interval in intervals if x in interval][0])
+    if aggrType == "mean":
+        tempAggrData = pd.Series(dfName[quantColName].tolist(),index=indices).groupby(level=0).mean()
+    true_min = (dfName[tempColName].astype("int64")//1e9).min()
+    print(tempAggrData.to_json())
+    print(true_min)
 def getTemporalMeta(colData: pd.Series):
     if colData.is_monotonic_increasing:
         result = "ascending"

@@ -140,6 +140,7 @@
                     </div>
                 {/each}
             </div>
+            
         {:else}
             <p class="mb-4">
                 All Pandas dataframes in your jupyter notebook will be profiled
