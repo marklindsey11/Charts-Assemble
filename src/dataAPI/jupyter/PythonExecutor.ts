@@ -6,6 +6,7 @@ import type {
     ColumnProfileData,
     ValueCount,
     IHistogram,
+    IColMeta,
 } from '../../common/exchangeInterfaces';
 import _ from 'lodash';
 import { compute_rest_props } from 'svelte/internal';
@@ -308,6 +309,77 @@ export class PythonPandasExecutor {
         } catch (error) {
             console.warn(`[Error caught] in getShape executing: ${code}`, error);
             return [undefined, undefined];
+        }
+    }
+
+    /**
+     * Get all info for numeric column
+     * @param dfName 
+     * @param colInfo 
+     * @returns ColumnProfileData with NumericSummary
+     */
+    public async getNumericData(dfName: string, colInfo: IColTypeTuple): Promise<ColumnProfileData> {
+        const isIndexPy = colInfo.colIsIndex ? "True" : "False";
+        const code = `digautoprofiler.getNumericData(${dfName}, "${replaceSpecial(colInfo.colName)}", ${isIndexPy})`;
+
+        const cd: ColumnProfileData = {
+            colName: colInfo.colName,
+            colType: colInfo.colType,
+            colIsIndex: colInfo.colIsIndex,
+            nullCount: 0,
+            summary: {
+                histogram: [],
+                quantMeta: undefined,
+                summaryType: "numeric"
+            },
+        };
+
+        try {
+            const res = await this.executePythonAP(code);
+            const content = res['content']; // might be null
+            const json_res = JSON.parse(content?.join("").replace(/'/g, '')); // remove single quotes bc not JSON parseable
+
+            return {
+                min: parseFloat(json_res['min']),
+                q25: parseFloat(json_res['25%']),
+                q50: parseFloat(json_res['50%']),
+                q75: parseFloat(json_res['75%']),
+                max: parseFloat(json_res['max']),
+                mean: parseFloat(json_res['mean'])
+            };
+        } catch (error) {
+            console.warn(`[Error caught] in getQuantMeta executing: ${code} `, error);
+            return {
+                min: undefined,
+                q25: undefined,
+                q50: undefined,
+                q75: undefined,
+                max: undefined,
+                mean: undefined
+            };
+        }
+    }
+
+    public async getColMeta(
+        dfName: string,
+        colName: string,
+        isIndex: boolean,
+    ): Promise<IColMeta> {
+        const isIndexPy = isIndex ? "True" : "False";
+        const code = `digautoprofiler.getColMeta(${dfName}, "${replaceSpecial(colName)}", ${isIndexPy})`;
+        try {
+            const res = await this.executePythonAP(code);
+            const content = res['content'];
+            return {
+                numUnique: parseInt(content[0]),
+                nullCount: parseInt(content[1])
+            };
+        } catch (error) {
+            console.warn(`[Error caught] in getColMeta executing: ${code}`, error);
+            return {
+                numUnique: undefined,
+                nullCount: undefined
+            };
         }
     }
 

@@ -40,6 +40,7 @@
     // locals
     let active = false;
     let wrapperDivWidth: number;
+    let vizToggleOption: 'viz';
 
     $: summaryWidthSize = getSummarySize(containerWidth);
 
