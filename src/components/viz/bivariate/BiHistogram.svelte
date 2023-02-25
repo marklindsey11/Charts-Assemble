@@ -3,11 +3,20 @@
     import { cubicOut as easing } from 'svelte/easing';
     import { scaleLinear } from 'd3-scale';
     import { bisector } from 'd3-array';
-    import _ from 'lodash';
+    import _, { create } from 'lodash';
     import type { IHistogram } from '../../../common/exchangeInterfaces';
     import BiHistogramTooltip from './BiHistogramTooltip.svelte';
 
-    export let data: IHistogram;
+
+    // import LayerCake component
+    import { LayerCake, Svg } from 'layercake';
+    import {scaleBand} from 'd3-scale';
+    import Column from './Column.svelte';
+    import Bar from './Bar.svelte';
+    import AxisX from './AxisX.svelte';
+    import AxisY from './AxisY.svelte';
+
+    export let data;
     export let width = 60;
     export let height = 19;
     export let time = 1000;
@@ -27,6 +36,10 @@
 
     // dots and labels
     export let vizOffset = 0;
+    export let xLabel: string;
+    export let yLabel: string;
+
+    let aggrType: string;
 
     const tw = tweened(0, { duration: time, easing });
 
@@ -78,9 +91,38 @@
     function clearMouseMove() {
         tooltipIdx = undefined;
     }
+
+    console.log(xLabel);
+    console.log(yLabel);
 </script>
 
-<div>
+<style>
+    .layercake-chart{
+        width: 95%;
+        height: 217px;
+    }
+</style>
+
+<div class="layercake-chart fill-red-300">
+<LayerCake
+padding={{ top: 5, bottom: 40, left: 40, right: 10}}
+x = {'count'}
+y = {'value'}
+yScale = {scaleBand().paddingInner([0.05])}
+yDomain={data.map(d => d.value)}
+xDomain={[0,null]}
+data = {data}
+>
+<Svg>
+    <Bar fill={"#fca5a5"}/>
+    <AxisX xLabel={xLabel}/>
+    <AxisY yLabel={yLabel} gridlines={false}/>
+  </Svg>
+</LayerCake>
+</div>
+
+
+<!-- <div>
     Aggregation Type:
     <select
         class="rounded border border-6 bg-gray-100 hover:border-gray-300"
@@ -92,9 +134,9 @@
         {height}
         on:mousemove={handleMousemove}
         on:mouseleave={clearMouseMove}
-    >
+    > -->
         <!-- histogram -->
-        <g shape-rendering="crispEdges">
+        <!-- <g shape-rendering="crispEdges">
             {#if showTooltip && !_.isUndefined(tooltipValue)}
                 <rect
                     x={X(tooltipValue.bucket) + separateQuantity}
@@ -138,4 +180,4 @@
         {/if}
         <slot x={X} y={Y} {buffer} />
     </svg>
-</div>
+</div> -->

@@ -9,7 +9,7 @@
         ValueCount
     } from '../common/exchangeInterfaces';
     import type { ProfileModel } from '../dataAPI/ProfileModel';
-    import _ from 'lodash';
+    import _, { update } from 'lodash';
     import Pin from './icons/Pin.svelte';
     import BivariateButton from './icons/BivariateButton.svelte';
     import Tooltip from './tooltip/Tooltip.svelte';
@@ -38,7 +38,6 @@
     // Bivariate variables
     let showAddButton = false;
     let showBivariateMenu = false;
-    let variables = [];
     let biDataPromise = undefined;
     let biDataStorage = [];
     let Xselected = false;
@@ -70,6 +69,11 @@
         clickBivariateButton = !clickBivariateButton;
     }
 
+    function handleAggrType(event,i: number){
+        let aggrType = event?.detail?.typ;
+        fetchBivariateData(dfName,xVariables[i],yVariables[i],aggrType).then(biData => biDataStorage[i] = biData);
+    }
+
     // // AddButton version
     // function handleVariable(event) {
     //     variables.push({
@@ -83,15 +87,17 @@
 
     function handleBivariate() {
         if (Xselected === true && Yselected === true) {
-            biDataPromise = fetchBivariateData(dfName, xVariable, yVariable);
+            biDataPromise = fetchBivariateData(dfName, xVariable, yVariable,"mean");
             xVariables.push(xVariable);
             yVariables.push(yVariable);
+
             Xselected = false;
             Yselected = false;
             biDataPromise.then(d => {
                 biDataStorage.push(d);
-                console.log(d);
             });
+            xVariable = null;
+            yVariable = null;
         }
     }
 
@@ -104,7 +110,8 @@
     async function fetchBivariateData(
         dfName: string,
         xVariable: ColumnProfileData,
-        yVariable: ColumnProfileData
+        yVariable: ColumnProfileData,
+        aggrType: string,
     ) {
         let biData;
         biData = await profileModel.getBivariateData(
@@ -112,11 +119,25 @@
             xVariable.name,
             xVariable.type,
             yVariable.name,
-            yVariable.type
+            yVariable.type,
+            aggrType
         );
 
         return biData;
     }
+
+    // update bivariate chart whenever the associated data is updated
+    function updateBivariate(){
+        let aggrTypes = biDataStorage.map(d => d.aggrType);
+        let biDataPromises = xVariables.map((_,i) => {return fetchBivariateData(dfName,xVariables[i],yVariables[i],aggrTypes[i])});
+        Promise.all(biDataPromises).then(biDataArr => {
+            biDataStorage = biDataArr;
+        });
+        
+    };
+
+    $: {dataframeProfile.profile; updateBivariate(); };
+    
 </script>
 
 <div>
@@ -222,7 +243,7 @@
                 {#if !_.isUndefined(biDataPromise)}
                     <!-- svelte-ignore empty-block -->
                     {#await biDataPromise then biData}
-                        {#each biDataStorage as previousBiData}
+                        {#each biDataStorage as previousBiData,idx}
                             <div class="pt-1 pb-1 pl-8 pr-4 w-full" bind:clientWidth={wrapperDivWidth}>
                                 <BivariateChart
                                     showTooltip={true}
@@ -232,6 +253,9 @@
                                     biData={previousBiData}
                                     width={wrapperDivWidth}
                                     height={217}
+                                    xLabel={previousBiData.yVariable}
+                                    yLabel={previousBiData.xVariable}
+                                    on:selectAggrType={(event) => {handleAggrType(event,idx)}}
                                 />
                             </div>
                         {/each}
@@ -250,6 +274,7 @@
                                 handleBivariate();
                             }}
                         >
+                            <option value={undefined}>-Select X-</option>
                             {#each dataframeProfile?.profile as column}
                                 <option value={column}>{column.name}</option>
                             {/each}
@@ -266,6 +291,7 @@
                                 handleBivariate();
                             }}
                         >
+                            <option value={undefined}>-Select Y-</option>
                             {#each dataframeProfile?.profile as column}
                                 <option value={column}>{column.name}</option>
                             {/each}
