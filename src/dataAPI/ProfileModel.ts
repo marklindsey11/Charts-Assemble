@@ -285,20 +285,21 @@ export class ProfileModel {
         colType1: string,
         colName2: string,
         colType2: string,
+        aggrType: string = "mean",
     ) {
         let aggrData;
         if (CATEGORICALS.has(colType1) && NUMERICS.has(colType2)) {
-            aggrData = {chartType: 'histogram', data: await this.getAggrData(dfName, colName1, colName2, "mean")};
+            aggrData = {chartType: 'histogram', aggrType: aggrType, xVariable: colName1, yVariable: colName2, data: await this.getAggrData(dfName, colName1, colName2, aggrType)};
         }
         else if(CATEGORICALS.has(colType2) && NUMERICS.has(colType1)){
-            aggrData = {chartType: 'histogram', data: await this.getAggrData(dfName, colName2, colName1, "mean")};
+            aggrData = {chartType: 'histogram', aggrType: aggrType, xVariable: colName2, yVariable: colName1, data: await this.getAggrData(dfName, colName2, colName1, aggrType)};
         }
-        // else if(TIMESTAMPS.has(colType1) && NUMERICS.has(colType2)){
-        //     aggrData = {chartType: 'linechart', data: await this.getTempAggrData(dfName,colName1,colName2,"mean")};
-        // }
-        // else if(TIMESTAMPS.has(colType2) && NUMERICS.has(colType1)){
-        //     aggrData = {chartType: 'linechart', data: await this.getTempAggrData(dfName,colName2,colName1,"mean")};
-        // }
+        else if(TIMESTAMPS.has(colType1) && NUMERICS.has(colType2)){
+            aggrData = {chartType: 'linechart', aggrType: aggrType, xVariable: colName1, yVariable: colName2, data: await this.getTempAggrData(dfName,colName1,colName2,aggrType)};
+        }
+        else if(TIMESTAMPS.has(colType2) && NUMERICS.has(colType1)){
+            aggrData = {chartType: 'linechart', aggrType: aggrType, xVariable: colName2, yVariable: colName1, data: await this.getTempAggrData(dfName,colName2,colName1,aggrType)};
+        }
         return aggrData;
     }
 
@@ -313,30 +314,30 @@ export class ProfileModel {
         return aggrData;
     }
 
-    // private async getTempAggrData(
-    //     dfName: string,
-    //     tempColName: string,
-    //     quantColName: string,
-    //     aggrType: string,
-    //     n = 10
-    // ){
-    //     const { timebin, histogram } = await this.executor.getTempAggrData(dfName,tempColName,quantColName,aggrType,n);
-    //     const interval = await this.executor.getTempInterval(dfName, tempColName, false);
+    private async getTempAggrData(
+        dfName: string,
+        tempColName: string,
+        quantColName: string,
+        aggrType: string,
+        n = 10
+    ){
+        const { timebin, histogram } = await this.executor.getTempAggrData(dfName,tempColName,quantColName,aggrType,n);
+        const interval = await this.executor.getTempInterval(dfName, tempColName, false);
 
-    //     const timeSummary: TimeColumnSummary = {
-    //         interval,
-    //         rollup: {
-    //             results: timebin,
-    //             spark: timebin,
-    //             timeRange: {
-    //                 start: timebin[0]?.ts_start,
-    //                 end: timebin[timebin.length - 1]?.ts_end,
-    //                 interval: interval
-    //             }
-    //         }
-    //     };
-    //     console.log(timeSummary);
-    //     return timeSummary;
-    // }
+        const timeSummary: TimeColumnSummary = {
+            interval,
+            rollup: {
+                results: timebin,
+                spark: timebin,
+                timeRange: {
+                    start: timebin[0]?.ts_start,
+                    end: timebin[timebin.length - 1]?.ts_end,
+                    interval: interval
+                }
+            }
+        };
+        console.log(timeSummary);
+        return timeSummary;
+    }
 
 }
