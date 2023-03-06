@@ -1,17 +1,12 @@
 <script lang="ts">
-    import { tweened } from 'svelte/motion';
-    import { cubicOut as easing } from 'svelte/easing';
-    import { scaleLinear } from 'd3-scale';
-    import { bisector } from 'd3-array';
-    import _, { create } from 'lodash';
-    import type { IHistogram } from '../../../common/exchangeInterfaces';
-    import BiHistogramTooltip from './BiHistogramTooltip.svelte';
+
+    import _ from 'lodash';
+
 
 
     // import LayerCake component
     import { LayerCake, Svg } from 'layercake';
     import {scaleBand} from 'd3-scale';
-    import Column from './Column.svelte';
     import Bar from './Bar.svelte';
     import AxisX from './AxisX.svelte';
     import AxisY from './AxisY.svelte';
@@ -24,7 +19,6 @@
     export let hoverColor: string = fillColor;
     export let baselineStrokeColor: string;
     export let separate = true;
-    $: separateQuantity = separate ? 0.25 : 0;
     export let showTooltip = false;
 
     // rowsize for table
@@ -39,61 +33,6 @@
     export let xLabel: string;
     export let yLabel: string;
 
-    let aggrType: string;
-
-    const tw = tweened(0, { duration: time, easing });
-
-    const lowValue = tweened(0, { duration: time / 2, easing });
-    const highValue = tweened(0, { duration: time / 2, easing });
-
-    $: minX = Math.min(...data.map(d => d.low));
-    $: maxX = Math.max(...data.map(d => d.high));
-    $: xScaleMin = left + vizOffset;
-    $: xScaleMax = width - right - vizOffset;
-    // x is fixed for width has no meaning for categorical
-    $: X = (num: number) => {
-        return xScaleMin + (num * (xScaleMax - xScaleMin)) / data.length;
-    };
-    $: XInvert = (x: number) => {
-        return Math.floor(
-            (x - xScaleMin) / ((xScaleMax - xScaleMin) / data.length)
-        );
-    };
-
-    $: yVals = data.map(d => d.count);
-    $: maxY = Math.max(...yVals);
-    $: Y = scaleLinear()
-        .domain([0, maxY])
-        .range([height - buffer - bottom, top + buffer]);
-
-    $: tw.set(1);
-
-    let tooltipIdx: number = undefined;
-    $: tooltipValue = data[tooltipIdx];
-
-    function handleMousemove(event: MouseEvent) {
-        xScaleMax - xScaleMin;
-        let nearestIdx = XInvert(event.offsetX);
-        let np = data[nearestIdx];
-        // only show tooltip when mouse x and y are in plot area
-        if (
-            np &&
-            event.offsetX > xScaleMin &&
-            event.offsetX < xScaleMax &&
-            event.offsetY < Y(0)
-        ) {
-            tooltipIdx = nearestIdx;
-        } else {
-            tooltipIdx = undefined;
-        }
-    }
-
-    function clearMouseMove() {
-        tooltipIdx = undefined;
-    }
-
-    console.log(xLabel);
-    console.log(yLabel);
 </script>
 
 <style>
@@ -103,9 +42,9 @@
     }
 </style>
 
-<div class="layercake-chart fill-red-300">
+<div class="layercake-chart fill-red-300 ">
 <LayerCake
-padding={{ top: 5, bottom: 40, left: 40, right: 10}}
+padding={{ top: 5, bottom: 50, left: 50, right: 0}}
 x = {'count'}
 y = {'value'}
 yScale = {scaleBand().paddingInner([0.05])}

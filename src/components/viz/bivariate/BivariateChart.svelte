@@ -15,73 +15,97 @@
     export let xLabel: string;
     export let yLabel: string;
 
-    let aggrType: string;
+    let aggrType: string = 'count';
+
+    let showMenu = false;
+    let collapse = false;
 
     const dispatch = createEventDispatcher();
 
     const onSelect = () => {
-        dispatch('selectAggrType',{
+        dispatch('selectAggrType', {
             typ: aggrType
-        })
+        });
     };
 </script>
 
 <div>
-    Aggregation Type:
-    <select
-        class="rounded border border-6 bg-gray-100 hover:border-gray-300"
-        bind:value={aggrType}
-        on:change={onSelect}
-    >
-        <option value={'mean'}>mean</option>
-        <option value={'count'}>count</option>
-        <option value={'sum'}>sum</option>
-        <option value={'min'}>min</option>
-        <option value={'max'}>max</option>
-    </select>
-    {#if biData.chartType === 'histogram'}
-        <BiHistogram
-            {showTooltip}
-            {fillColor}
-            {hoverColor}
-            {baselineStrokeColor}
-            data={biData.data}
-            {width}
-            {height}
-            xLabel={xLabel}
-            yLabel={yLabel}
-        />
-    {:else if biData.chartType === 'linechart'}
-        <TimestampDetail
-            data={biData.data?.rollup?.results}
-            xAccessor="ts_end"
-            yAccessor="mean"
-            height={160}
-            {width}
-            interval={biData.data?.interval}
-        />
+    <div class="w-full bg-gray-100 pb-1 pt-1" style="margin-bottom:2px" on:click={()=>{collapse=!collapse}}>
+        {xLabel} vs {yLabel}
+    </div>
+    {#if !collapse}
+        <div class="flex" style="z-index:1">
+            <span>X: </span>
+            <div class="rounded border border-solid variable pl-1 pr-1">
+                {xLabel}
+            </div>
+            <div class="grow" />
+            <span>Y: </span>
+            <div
+                class="rounded border border-solid cursor-grabbing variable pl-1 pr-1"
+            >
+                {yLabel}
+                <span class="aggregation-select">
+                    <button
+                        on:click={() => {
+                            showMenu = !showMenu;
+                        }}
+                    >
+                        {aggrType}
+                    </button>
+                    {#if showMenu}
+                        <div
+                            class="absolute right-2 mt-2 w-20 origin-top-right rounded-md bg-white hover:bg-gray-100 dark:bg-zinc-900 shadow-lg border border-gray-50 dark:border-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none transform scale-100"
+                            style="z-index:9; cursor:pointer"
+                        >
+                            {#each ['count', 'mean', 'sum', 'min', 'max'] as typ}
+                                <span
+                                    class="text-gray-700 dark:text-gray-200 block px-2 py-1 text-sm"
+                                    on:click={() => {
+                                        aggrType = typ;
+                                        onSelect();
+                                    }}>{typ}</span
+                                >
+                            {/each}
+                        </div>
+                    {/if}
+                </span>
+            </div>
+        </div>
+        {#if biData.chartType === 'histogram'}
+            <BiHistogram
+                {showTooltip}
+                {fillColor}
+                {hoverColor}
+                {baselineStrokeColor}
+                data={biData.data}
+                {width}
+                {height}
+                xLabel={yLabel}
+                yLabel={xLabel}
+            />
+        {:else if biData.chartType === 'linechart'}
+            <TimestampDetail
+                data={biData.data?.rollup?.results}
+                xAccessor="ts_end"
+                yAccessor="mean"
+                height={160}
+                {width}
+                interval={biData.data?.interval}
+            />
+        {/if}
     {/if}
 </div>
 
-<div>
-    {#if biData.chartType === "histogram"}
-    <BiHistogram
-    showTooltip={showTooltip}
-    fillColor={fillColor}
-    hoverColor={hoverColor}
-    baselineStrokeColor={baselineStrokeColor}
-    data={biData.data}
-    width={width}
-    height={height}
-    />
-    {:else if biData.chartType === "linechart"}
-    <TimestampDetail
-    data={biData.data?.rollup?.results}
-    xAccessor="ts_end"
-    yAccessor="mean"
-    height={160}
-    width={width}
-    interval={biData.data?.interval}
-    />
-    {/if}
-</div>
+<style>
+    .variable {
+        min-width: 80px;
+        height: 24px;
+        cursor: grab;
+    }
+
+    .aggregation-select {
+        background-color: #bdbdbd;
+        font-size: 10px;
+    }
+</style>

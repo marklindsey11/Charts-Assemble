@@ -75,7 +75,7 @@
         >{formatTick(tick)}</text>
       </g>
     {/each}
-    <g class="tick" transform="translate(-20,{$yScale(tickVals[Math.floor(tickVals.length/2)])})">
+    <g class="tick" transform="translate(-5,{$yScale(tickVals[Math.floor(tickVals.length/2)])})">
     <text class="text yLabel">{yLabel}</text>
     </g>
   </g>

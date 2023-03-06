@@ -9,7 +9,6 @@ import type {
     IColMeta,
 } from '../../common/exchangeInterfaces';
 import _ from 'lodash';
-import { compute_rest_props } from 'svelte/internal';
 
 
 type ExecResult = { content: string[]; exec_count: number };
@@ -146,7 +145,6 @@ export class PythonPandasExecutor {
     public async getAllDataFrames(currentOutputName: string): Promise<IDFColMap> {
         try {
             const var_names = await this.getVariableNames(currentOutputName);
-
             if (var_names) {
                 const isDF = await this.getDFVars(var_names);
                 const vars_DF = var_names.filter(

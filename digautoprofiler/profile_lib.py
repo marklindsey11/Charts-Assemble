@@ -302,9 +302,18 @@ def getTemporalMeta(dfName:pd.DataFrame, colName:str, isIndex=False):
     else:
         result = "noSort"
     print(result)
-def getAggrData(dfName: pd.DataFrame, catColName: str, quantColName: str, aggrType: str="mean", n=10):
+    
+def getAggrData(dfName: pd.DataFrame, catColName: str, quantColName: str, aggrType: str="count", n=10):
     if aggrType == "mean":
         aggrData = dfName[[catColName,quantColName]].groupby(catColName)[quantColName].mean().sort_values(ascending=True)[:n]
+    if aggrType == "count":
+        aggrData = dfName[[catColName,quantColName]].groupby(catColName)[quantColName].count().sort_values(ascending=True)[:n]
+    if aggrType == "sum":
+        aggrData = dfName[[catColName,quantColName]].groupby(catColName)[quantColName].sum().sort_values(ascending=True)[:n]
+    if aggrType == "min":
+        aggrData = dfName[[catColName,quantColName]].groupby(catColName)[quantColName].min().sort_values(ascending=True)[:n]
+    if aggrType == "max":
+        aggrData = dfName[[catColName,quantColName]].groupby(catColName)[quantColName].max().sort_values(ascending=True)[:n]
     print(aggrData.to_json())
     
 

@@ -5,11 +5,10 @@
     import ExpanderButton from './nav/ExpanderButton.svelte';
     import type {
         ColumnProfileData,
-        IDFProfileWState,
-        ValueCount
+        IDFProfileWState
     } from '../common/exchangeInterfaces';
     import type { ProfileModel } from '../dataAPI/ProfileModel';
-    import _, { update } from 'lodash';
+    import _ from 'lodash';
     import Pin from './icons/Pin.svelte';
     import BivariateButton from './icons/BivariateButton.svelte';
     import Tooltip from './tooltip/Tooltip.svelte';
@@ -17,6 +16,8 @@
     import { formatInteger } from './utils/formatters';
     import { NUMERIC_TOKENS } from './data-types/pandas-data-types';
     import BivariateChart from './viz/bivariate/BivariateChart.svelte';
+    import DropdownMenu from './viz/bivariate/DropdownMenu.svelte';
+
     export let dfName: string;
     export let dataframeProfile: IDFProfileWState;
     export let isInFocus = false;
@@ -40,12 +41,16 @@
     let showBivariateMenu = false;
     let biDataPromise = undefined;
     let biDataStorage = [];
-    let Xselected = false;
-    let Yselected = false;
+    let xSelected = false;
+    let ySelected = false;
     let xVariable: ColumnProfileData;
     let xVariables: ColumnProfileData[] = [];
     let yVariable: ColumnProfileData;
     let yVariables: ColumnProfileData[] = [];
+
+    //Dropdown Menu
+    $: xOptionColumns = dataframeProfile?.profile;
+    $: yOptionColumns = dataframeProfile?.profile;
 
     // view
     let wrapperDivWidth: number;
@@ -69,9 +74,11 @@
         clickBivariateButton = !clickBivariateButton;
     }
 
-    function handleAggrType(event,i: number){
+    function handleAggrType(event, i: number) {
         let aggrType = event?.detail?.typ;
-        fetchBivariateData(dfName,xVariables[i],yVariables[i],aggrType).then(biData => biDataStorage[i] = biData);
+        fetchBivariateData(dfName, xVariables[i], yVariables[i], aggrType).then(
+            biData => (biDataStorage[i] = biData)
+        );
     }
 
     // // AddButton version
@@ -85,17 +92,40 @@
     //     }
     // }
 
-    function handleBivariate() {
-        if (Xselected === true && Yselected === true) {
-            biDataPromise = fetchBivariateData(dfName, xVariable, yVariable,"mean");
-            xVariables.push(xVariable);
-            yVariables.push(yVariable);
+    function handleBivariate(event, variable: string) {
+        if (variable === 'x') {
+            xVariable = event?.detail;
+        } else if (variable === 'y') {
+            yVariable = event?.detail;
+        }
 
-            Xselected = false;
-            Yselected = false;
-            biDataPromise.then(d => {
-                biDataStorage.push(d);
-            });
+        if (xSelected === true && ySelected === true) {
+            //check duplicated pairs
+            let duplicated = false;
+            for (let i = 0; i < xVariables.length; i++) {
+                if (
+                    xVariable === xVariables[i] &&
+                    yVariable === yVariables[i]
+                ) {
+                    duplicated = true;
+                }
+            }
+            if (!duplicated) {
+                biDataPromise = fetchBivariateData(
+                    dfName,
+                    xVariable,
+                    yVariable,
+                    'count'
+                );
+                xVariables.push(xVariable);
+                yVariables.push(yVariable);
+
+                biDataPromise.then(d => {
+                    biDataStorage.push(d);
+                });
+            }
+            xSelected = false;
+            ySelected = false;
             xVariable = null;
             yVariable = null;
         }
@@ -111,7 +141,7 @@
         dfName: string,
         xVariable: ColumnProfileData,
         yVariable: ColumnProfileData,
-        aggrType: string,
+        aggrType: string
     ) {
         let biData;
         biData = await profileModel.getBivariateData(
@@ -127,17 +157,25 @@
     }
 
     // update bivariate chart whenever the associated data is updated
-    function updateBivariate(){
+    function updateBivariate() {
         let aggrTypes = biDataStorage.map(d => d.aggrType);
-        let biDataPromises = xVariables.map((_,i) => {return fetchBivariateData(dfName,xVariables[i],yVariables[i],aggrTypes[i])});
+        let biDataPromises = xVariables.map((_, i) => {
+            return fetchBivariateData(
+                dfName,
+                xVariables[i],
+                yVariables[i],
+                aggrTypes[i]
+            );
+        });
         Promise.all(biDataPromises).then(biDataArr => {
             biDataStorage = biDataArr;
         });
-        
-    };
+    }
 
-    $: {dataframeProfile.profile; updateBivariate(); };
-    
+    $: {
+        dataframeProfile.profile;
+        updateBivariate();
+    }
 </script>
 
 <div>
@@ -170,25 +208,6 @@
         </div>
 
         <div slot="header-no-collapse">
-            <Tooltip location="right" alignment="center" distance={8}>
-                <button
-                    class={baseClasses +
-                        (clickBivariateButton
-                            ? 'text-black'
-                            : headerHover
-                            ? 'text-gray-400'
-                            : 'text-transparent')}
-                    style="width: 16px; height: 16px;"
-                    on:click={handleBivariateButton}
-                >
-                    <BivariateButton size="16px" />
-                </button>
-
-                <TooltipContent slot="tooltip-content">
-                    Bivariate Chart
-                </TooltipContent>
-            </Tooltip>
-
             <Tooltip location="right" alignment="center" distance={8}>
                 <button
                     class={baseClasses +
@@ -240,11 +259,27 @@
                 {:else}
                     <p class="pl-8">No columns!</p>
                 {/if}
+                <Tooltip location="right" alignment="center" distance={8}>
+                    <button
+                        class={baseClasses + 'text-gray-400 ' + 'pl-2'}
+                        style="width: 24px; height: 24px;"
+                        on:click={handleBivariateButton}
+                    >
+                        <BivariateButton size="24px" />
+                    </button>
+
+                    <TooltipContent slot="tooltip-content">
+                        Bivariate Chart
+                    </TooltipContent>
+                </Tooltip>
                 {#if !_.isUndefined(biDataPromise)}
                     <!-- svelte-ignore empty-block -->
                     {#await biDataPromise then biData}
-                        {#each biDataStorage as previousBiData,idx}
-                            <div class="pt-1 pb-1 pl-8 pr-4 w-full" bind:clientWidth={wrapperDivWidth}>
+                        {#each biDataStorage as previousBiData, idx}
+                            <div
+                                class="pt-1 pb-1 pl-8 pr-4 w-full"
+                                bind:clientWidth={wrapperDivWidth}
+                            >
                                 <BivariateChart
                                     showTooltip={true}
                                     fillColor={NUMERIC_TOKENS.vizFillClass}
@@ -253,9 +288,11 @@
                                     biData={previousBiData}
                                     width={wrapperDivWidth}
                                     height={217}
-                                    xLabel={previousBiData.yVariable}
-                                    yLabel={previousBiData.xVariable}
-                                    on:selectAggrType={(event) => {handleAggrType(event,idx)}}
+                                    xLabel={previousBiData.xVariable}
+                                    yLabel={previousBiData.yVariable}
+                                    on:selectAggrType={event => {
+                                        handleAggrType(event, idx);
+                                    }}
                                 />
                             </div>
                         {/each}
@@ -263,41 +300,32 @@
                     {/await}
                 {/if}
                 {#if showBivariateMenu}
-                <div class="flex">
-                    <div class="bivariate-menu">
-                        Bivariate X:
-                        <select
-                            class="bivariate-menu rounded border border-6 bg-gray-100 hover:border-gray-300"
-                            bind:value={xVariable}
-                            on:change={() => {
-                                Xselected = true;
-                                handleBivariate();
-                            }}
-                        >
-                            <option value={undefined}>-Select X-</option>
-                            {#each dataframeProfile?.profile as column}
-                                <option value={column}>{column.name}</option>
-                            {/each}
-                        </select>
+                    <div class="flex pl-2 pr-2" style="flex-direction:column">
+                        <div style="width:100%">
+                            Create new bivariate chart:
+                        </div>
+                        <div>
+                            <DropdownMenu
+                                title={'Bivariate X: '}
+                                bind:variable={xVariable}
+                                bind:selected={xSelected}
+                                bind:optionColumns={xOptionColumns}
+                                on:select={event => {
+                                    handleBivariate(event, 'x');
+                                }}
+                            />
+                            <div class="grow" />
+                            <DropdownMenu
+                                title={'Bivariate Y: '}
+                                bind:variable={yVariable}
+                                bind:selected={ySelected}
+                                bind:optionColumns={yOptionColumns}
+                                on:select={event => {
+                                    handleBivariate(event, 'y');
+                                }}
+                            />
+                        </div>
                     </div>
-                    <div class="grow"/>
-                    <div class="bivariate-menu">
-                        Bivariate Y:
-                        <select
-                            class="bivariate-menu rounded border border-6 bg-gray-100 hover:border-gray-300"
-                            bind:value={yVariable}
-                            on:change={() => {
-                                Yselected = true;
-                                handleBivariate();
-                            }}
-                        >
-                            <option value={undefined}>-Select Y-</option>
-                            {#each dataframeProfile?.profile as column}
-                                <option value={column}>{column.name}</option>
-                            {/each}
-                        </select>
-                    </div>
-                </div>
                 {/if}
             </div>
         </div>
@@ -325,7 +353,7 @@
         border-radius: 2px;
     }
 
-    .bivariate-menu{
+    .bivariate-menu {
         width: 50%;
         padding: 0.2em;
     }
