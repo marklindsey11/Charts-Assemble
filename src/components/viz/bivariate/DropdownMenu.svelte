@@ -22,7 +22,7 @@
             displayColumns = optionColumns;
         } else {
             displayColumns = optionColumns.filter(column =>
-                column.name.toLowerCase().match(inputValue.toLowerCase())
+                column.colName.toLowerCase().match(inputValue.toLowerCase())
             );
         }
     }
@@ -68,11 +68,11 @@
                         class="dropdown-menu-option"
                         on:click={() => {
                             selected = !selected;
-                            selectedColumn = column.name;
+                            selectedColumn = column.colName;
                             dispatch('select', column);
                         }}
                     >
-                        {column.name}
+                        {column.colName}
                     </div>
                 {/each}
             </div>

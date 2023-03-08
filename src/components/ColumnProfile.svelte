@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
     import { slide } from 'svelte/transition';
     import ColumnEntry from './ColumnEntry.svelte';
     import DataTypeIcon from './data-types/DataTypeIcon.svelte';
@@ -22,7 +21,6 @@
         isBooleanSummary
     } from '../common/exchangeInterfaces';
     import { showIndex } from '../stores';
-    import AddVariable from './icons/AddVariable.svelte';
     import VizOrText from './fact-panel/VizOrStats.svelte';
 
     // props
