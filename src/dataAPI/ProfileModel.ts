@@ -8,8 +8,7 @@ import type {
     IDFProfileWStateMap,
     ColumnProfileData,
     IDFProfileWState,
-    IColTypeTuple,
-    ValueCount
+    IColTypeTuple
 } from '../common/exchangeInterfaces';
 import {
     NUMERICS,

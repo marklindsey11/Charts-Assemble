@@ -146,10 +146,10 @@
         let biData;
         biData = await profileModel.getBivariateData(
             dfName,
-            xVariable.name,
-            xVariable.type,
-            yVariable.name,
-            yVariable.type,
+            xVariable.colName,
+            xVariable.colType,
+            yVariable.colName,
+            yVariable.colType,
             aggrType
         );
 

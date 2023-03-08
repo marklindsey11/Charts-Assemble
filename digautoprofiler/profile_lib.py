@@ -245,49 +245,6 @@ def getQuantMeta(colData: pd.Series):
 
     return statistics
 
-def getQuantMeta(dfName: pd.DataFrame, colName: str, isIndex=False):
-    if isIndex:
-        colData = dfName.index.to_series()
-    else:
-        colData = dfName[colName]
-    
-    describe = colData.describe()
-    sd = describe.loc['std']
-    mean = describe.loc['mean']
-    q3 = describe.loc['75%']
-    q1 = describe.loc['25%']
-
-    # get num outliers > 3 std away from mean
-    normalized = (colData - mean) / sd
-    sd_num_outliers = sum( abs(normalized) > 3)
-
-    # get iqr outliers that are 1.5 * iqr away from q1 or q3
-    iqr = q3 - q1
-    lower = q1 - 1.5 * iqr
-    upper = q3 + 1.5 * iqr
-    iqr_num_outliers = sum((colData < lower) | (colData > upper))
-
-    # get sortedness
-    if colData.is_monotonic_increasing:
-        status = "ascending"
-    elif colData.is_monotonic_decreasing:
-        status = "descending"
-    else:
-        status = "noSort"
-    
-    n_zero = sum(colData == 0)
-    n_negative = sum(colData < 0)
-    n_positive = sum(colData > 0)
-    
-
-    print(describe.to_json())
-    print(sd_num_outliers)
-    print(iqr_num_outliers)
-    print(status)
-    print(n_zero)
-    print(n_negative)
-    print(n_positive)
-
 
 def getTemporalMeta(dfName:pd.DataFrame, colName:str, isIndex=False):
     if isIndex:
