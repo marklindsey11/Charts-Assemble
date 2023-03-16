@@ -8,7 +8,7 @@
         IDFProfileWState
     } from '../common/exchangeInterfaces';
     import type { ProfileModel } from '../dataAPI/ProfileModel';
-    import _ from 'lodash';
+    import _, { countBy } from 'lodash';
     import Pin from './icons/Pin.svelte';
     import BivariateButton from './icons/BivariateButton.svelte';
     import Tooltip from './tooltip/Tooltip.svelte';
@@ -17,6 +17,8 @@
     import { NUMERIC_TOKENS } from './data-types/pandas-data-types';
     import BivariateChart from './viz/bivariate/BivariateChart.svelte';
     import DropdownMenu from './viz/bivariate/DropdownMenu.svelte';
+    import Column from './viz/bivariate/Column.svelte';
+    import AddVariable from './icons/AddVariable.svelte';
 
     export let dfName: string;
     export let dataframeProfile: IDFProfileWState;
@@ -75,8 +77,17 @@
     }
 
     function handleAggrType(event, i: number) {
+        let timeOffsets = biDataStorage.map(d => d.timeOffset);
         let aggrType = event?.detail?.typ;
-        fetchBivariateData(dfName, xVariables[i], yVariables[i], aggrType).then(
+        fetchBivariateData(dfName, xVariables[i].column, yVariables[i].column, aggrType,timeOffsets[i]).then(
+            biData => (biDataStorage[i] = biData)
+        );
+    }
+
+    function handleTimeOffset(event, i: number){
+        let aggrTypes = biDataStorage.map(d => d.aggrType);
+        let timeOffset = event?.detail?.timeOffset;
+        fetchBivariateData(dfName, xVariables[i].column, yVariables[i].column, aggrTypes[i],timeOffset).then(
             biData => (biDataStorage[i] = biData)
         );
     }
@@ -94,18 +105,18 @@
 
     function handleBivariate(event, variable: string) {
         if (variable === 'x') {
-            xVariable = event?.detail;
+            xVariable = event?.detail; // in the form of {"column":ColumnProfileData,"timestep":string}
         } else if (variable === 'y') {
             yVariable = event?.detail;
         }
 
         if (xSelected === true && ySelected === true) {
-            //check duplicated pairs
+            // avoid generating charts of same x and y variables
             let duplicated = false;
             for (let i = 0; i < xVariables.length; i++) {
                 if (
-                    xVariable === xVariables[i] &&
-                    yVariable === yVariables[i]
+                    xVariable.column === xVariables[i].column &&
+                    yVariable.column === yVariables[i].column
                 ) {
                     duplicated = true;
                 }
@@ -113,9 +124,10 @@
             if (!duplicated) {
                 biDataPromise = fetchBivariateData(
                     dfName,
-                    xVariable,
-                    yVariable,
-                    'count'
+                    xVariable.column,
+                    yVariable.column,
+                    'count',
+                    xVariable.timestep,
                 );
                 xVariables.push(xVariable);
                 yVariables.push(yVariable);
@@ -141,7 +153,8 @@
         dfName: string,
         xVariable: ColumnProfileData,
         yVariable: ColumnProfileData,
-        aggrType: string
+        aggrType: string,
+        timestep: string,
     ) {
         let biData;
         biData = await profileModel.getBivariateData(
@@ -150,9 +163,9 @@
             xVariable.colType,
             yVariable.colName,
             yVariable.colType,
-            aggrType
+            aggrType,
+            timestep,
         );
-
         return biData;
     }
 
@@ -162,9 +175,10 @@
         let biDataPromises = xVariables.map((_, i) => {
             return fetchBivariateData(
                 dfName,
-                xVariables[i],
-                yVariables[i],
-                aggrTypes[i]
+                xVariables[i].column,
+                yVariables[i].column,
+                aggrTypes[i],
+                xVariables[i].timestep,
             );
         });
         Promise.all(biDataPromises).then(biDataArr => {
@@ -261,7 +275,7 @@
                 {/if}
                 <Tooltip location="right" alignment="center" distance={8}>
                     <button
-                        class={baseClasses + 'text-gray-400 ' + 'pl-2'}
+                        class={baseClasses + 'text-gray-400'}
                         style="width: 24px; height: 24px;"
                         on:click={handleBivariateButton}
                     >
@@ -281,18 +295,20 @@
                                 bind:clientWidth={wrapperDivWidth}
                             >
                                 <BivariateChart
-                                    showTooltip={true}
-                                    fillColor={NUMERIC_TOKENS.vizFillClass}
-                                    hoverColor={NUMERIC_TOKENS.vizHoverClass}
-                                    baselineStrokeColor={NUMERIC_TOKENS.vizStrokeClass}
                                     biData={previousBiData}
-                                    width={wrapperDivWidth}
-                                    height={217}
-                                    xLabel={previousBiData.xVariable}
-                                    yLabel={previousBiData.yVariable}
+                                    xLabel={previousBiData.xName}
+                                    xType={previousBiData.xType}
+                                    yLabel={previousBiData.yName}
+                                    yType={previousBiData.yType}
+                                    timeOffset={previousBiData.timeOffset}
                                     on:selectAggrType={event => {
                                         handleAggrType(event, idx);
                                     }}
+                                    on:selectTimeOffset={event => {
+                                        handleTimeOffset(event, idx);
+                                    }
+                                
+                                    }
                                 />
                             </div>
                         {/each}
@@ -307,7 +323,6 @@
                         <div>
                             <DropdownMenu
                                 title={'Bivariate X: '}
-                                bind:variable={xVariable}
                                 bind:selected={xSelected}
                                 bind:optionColumns={xOptionColumns}
                                 on:select={event => {
@@ -317,7 +332,6 @@
                             <div class="grow" />
                             <DropdownMenu
                                 title={'Bivariate Y: '}
-                                bind:variable={yVariable}
                                 bind:selected={ySelected}
                                 bind:optionColumns={yOptionColumns}
                                 on:select={event => {

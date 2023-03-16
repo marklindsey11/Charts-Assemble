@@ -1,19 +1,32 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import type { ColumnProfileData } from '../../../common/exchangeInterfaces';
+    import type { Logger } from '../../../logger/Logger';
+    import { TIMESTAMPS } from '../../data-types/pandas-data-types';
 
     const dispatch = createEventDispatcher();
 
     export let title: string;
-    export let variable: ColumnProfileData;
     export let selected: boolean;
     export let optionColumns: ColumnProfileData[];
 
     $: displayColumns = optionColumns;
     let inputValue = '';
-    let selectedColumn = '';
+    let selectedColumn: ColumnProfileData;
+    let showOptionMenu = false;
 
-    let showMenu = false;
+    let showTimeStepMenu = false;
+    let timestep = 'Select Timestep';
+
+    let offsetAliases = {
+        year: 'Y',
+        month: 'M',
+        week: 'W',
+        day: 'D',
+        hour: 'H',
+        minute: 'T',
+        second: 'S'
+    };
 
     let w: number, h: number;
 
@@ -33,10 +46,44 @@
     <div
         class="dropdown-menu-container rounded border border-6 bg-gray-100 hover:border-gray-300"
         on:click={() => {
-            showMenu = !showMenu;
+            showOptionMenu = !showOptionMenu;
         }}
     >
-        <div class="dropdown-menu-option pl-1" style="float:left;max-width:75%">{selectedColumn}</div>
+        <div class="dropdown-menu-option pl-1" style="float:left;max-width:75%">
+            {selectedColumn?.colName ? selectedColumn.colName : ''}
+            <!-- show empty string if no column is selected -->
+            {#if TIMESTAMPS.has(selectedColumn?.colType)}
+                <span class="timestep-select">
+                    <button
+                        on:click={event => {
+                            event.stopPropagation();
+                            showTimeStepMenu = !showTimeStepMenu;
+                        }}
+                        >{timestep}
+                    </button>
+                    {#if showTimeStepMenu}
+                        <div
+                            class="absolute right-2 mt-2 w-20 origin-top-right rounded-md bg-white hover:bg-gray-100 dark:bg-zinc-900 shadow-lg border border-gray-50 dark:border-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none transform scale-100"
+                            style="z-index:9; cursor:pointer"
+                        >
+                            {#each ['year', 'month', 'week', 'day', 'hour', 'minute', 'second'] as step}
+                                <span
+                                    class="text-gray-700 dark:text-gray-200 block px-2 py-1 text-sm"
+                                    on:click={event => {
+                                        event.stopPropagation();
+                                        timestep = step;
+                                        dispatch('select', {
+                                            column: selectedColumn,
+                                            timestep: offsetAliases[timestep]
+                                        });
+                                    }}>{step}</span
+                                >
+                            {/each}
+                        </div>
+                    {/if}
+                </span>
+            {/if}
+        </div>
         <svg
             class="pt-1 pb-1 pl-1 pr-1"
             width={'20px'}
@@ -48,7 +95,7 @@
                 d="M525.873548 897.156129l-383.174193-761.723871 763.045161-1.981935-379.870968 763.705806z"
             /></svg
         >
-        {#if showMenu}
+        {#if showOptionMenu}
             <div
                 class="dropdown-menu-options rounded border border-6 bg-gray-100 hover:border-gray-300"
             >
@@ -68,8 +115,11 @@
                         class="dropdown-menu-option"
                         on:click={() => {
                             selected = !selected;
-                            selectedColumn = column.colName;
-                            dispatch('select', column);
+                            selectedColumn = column;
+                            dispatch('select', {
+                                column: selectedColumn,
+                                timestep: offsetAliases[timestep]
+                            });
                         }}
                     >
                         {column.colName}
@@ -78,20 +128,6 @@
             </div>
         {/if}
     </div>
-
-    <!-- <select
-        class="bivariate-menu rounded border border-6 bg-gray-100 hover:border-gray-300"
-        bind:value={variable}
-        on:change={() => {
-            selected = true;
-            dispatch('select');
-        }}
-    >
-        <option value={undefined}>-Select...-</option>
-        {#each optionColumns as column}
-            <option value={column}>{column.name}</option>
-        {/each}
-    </select> -->
 </div>
 
 <style>
@@ -110,7 +146,7 @@
     }
 
     .dropdown-menu-container {
-        width:50%;
+        width: 50%;
         position: relative;
         display: inline-block;
         height: 20px;
@@ -132,5 +168,10 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .timestep-select {
+        background-color: #bdbdbd;
+        font-size: 10px;
     }
 </style>

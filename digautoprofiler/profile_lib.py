@@ -274,14 +274,21 @@ def getAggrData(dfName: pd.DataFrame, catColName: str, quantColName: str, aggrTy
     print(aggrData.to_json())
     
 
-def getTempAggrData(dfName: pd.DataFrame, tempColName: str, quantColName: str, aggrType: str="mean", n=10):
-    intervals = (dfName[tempColName].astype("int64")//1e9).value_counts(bins=min(n,dfName[tempColName].nunique()),sort=False).index
-    indices = (dfName[tempColName].astype("int64")//1e9).apply(lambda x:[interval for interval in intervals if x in interval][0])
+def getTempAggrData(dfName: pd.DataFrame, tempColName: str, quantColName: str, timestep: str, aggrType: str="mean"): 
+    indices = dfName[tempColName].dt.to_period(timestep).astype('string')
+    groups = pd.Series(dfName[quantColName].tolist(),index=indices).groupby(level=0)
     if aggrType == "mean":
-        tempAggrData = pd.Series(dfName[quantColName].tolist(),index=indices).groupby(level=0).mean()
-    true_min = (dfName[tempColName].astype("int64")//1e9).min()
+        tempAggrData = groups.mean()
+    if aggrType == "count":
+        tempAggrData = groups.count()
+    if aggrType == "sum":
+        tempAggrData = groups.sum()
+    if aggrType == "min":
+        tempAggrData = groups.min()
+    if aggrType == "max":
+        tempAggrData = groups.max()
     print(tempAggrData.to_json())
-    print(true_min)
+    
 def getTemporalMeta(colData: pd.Series):
     if colData.is_monotonic_increasing:
         result = "ascending"
