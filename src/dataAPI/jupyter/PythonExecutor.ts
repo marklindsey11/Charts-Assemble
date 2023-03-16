@@ -5,7 +5,6 @@ import type {
     IDFColMap,
     ColumnProfileData,
     ValueCount,
-    IHistogram,
     IColMeta,
 } from '../../common/exchangeInterfaces';
 import _ from 'lodash';
@@ -507,7 +506,7 @@ export class PythonPandasExecutor {
             Object.keys(json_res).forEach((k,i) => {data.push({ 'value': k, 'count': json_res[k], 'bucket': i });});
             return data;
         } catch (error) {
-            console.warn(`[Error caught] in getValueCounts executing: ${code}`, error);
+            console.warn(`[Error caught] in getAggrData executing: ${code}`, error);
             return [];
         }
     }
@@ -516,48 +515,20 @@ export class PythonPandasExecutor {
         dfName: string,
         tempColName: string,
         quantColName: string,
+        timestep: string,
         aggrType: string,
-        n = 10
     ){
-        const code = `digautoprofiler.getTempAggrData(${dfName}, "${replaceSpecial(tempColName)}", "${replaceSpecial(quantColName)}", "${aggrType}", ${n})`;
+        const code = `digautoprofiler.getTempAggrData(${dfName}, "${replaceSpecial(tempColName)}", "${replaceSpecial(quantColName)}", "${timestep}", "${aggrType}")`;
         try {
             const res = await this.executePythonAP(code);
             const content = res['content'];
-            const timebinData = [];
-            const histogram: IHistogram = []
+            const data = [];
             const json_res = JSON.parse(content[0].replace(/'/g, '')); // remove single quotes bc not JSON parseable
-            const true_minimum = parseFloat(content[1]);
-            Object.keys(json_res).forEach((k, i) => {
-                const cleank = k.replace(/[\])}[{(]/g, ''); // comes in interval formatting like [22, 50)
-                const [low, high] = cleank.split(',');
-
-                const lowNum = parseFloat(low)
-                const highNum = parseFloat(high)
-
-                const lowDate = new Date(lowNum * 1000)
-                const highDate = new Date(highNum * 1000)
-
-                // for time detail chart
-                timebinData.push({
-                    // Pandas extends the minimum bin an arbitrary number below the col's minimum so we shift the lowest bin boundary to the actual minimum
-                    ts_start: i === 0 ? new Date(true_minimum * 1000) : lowDate,
-                    ts_end: highDate,
-                    [aggrType]: json_res[k],
-                });
-                // for histogram preview
-                histogram.push(
-                    {
-                        low: i === 0 ? true_minimum : lowNum,
-                        high: highNum,
-                        count: json_res[k],
-                        bucket: i
-                    }
-                )
-            });
-            return { timebin: timebinData, histogram: histogram };
+            Object.keys(json_res).forEach((k,i) => {data.push({ 'period': k, 'value': json_res[k], 'bucket': i });});
+            return data;
         } catch (error) {
             console.warn(`[Error caught] in getTempAggrData executing: ${code}`, error);
-            return { timebin: [], histogram: [] };
+            return [];
         }
     }
 }
