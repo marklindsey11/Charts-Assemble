@@ -1,16 +1,48 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import type { ColumnProfileData } from '../../../common/exchangeInterfaces';
-    import type { Logger } from '../../../logger/Logger';
-    import { TIMESTAMPS } from '../../data-types/pandas-data-types';
+    import {
+        NUMERICS,
+        BOOLEANS,
+        TIMESTAMPS,
+        INTERVALS,
+        CATEGORICALS
+    } from '../../data-types/pandas-data-types';
+    import _ from 'lodash';
 
     const dispatch = createEventDispatcher();
 
     export let title: string;
     export let selected: boolean;
     export let optionColumns: ColumnProfileData[];
+    export let clickable: boolean;
+    export let filteringColumn = undefined; // in the form of {"column":ColumnProfileData,"timestep":string}
 
+    function filterByType(columnProfile: ColumnProfileData) {
+        if (!_.isUndefined(columnProfile)) {
+            if (NUMERICS.has(columnProfile.colType)) {
+                displayColumns = optionColumns.filter(
+                    column =>
+                        CATEGORICALS.has(column.colType) ||
+                        TIMESTAMPS.has(column.colType)
+                );
+            } else if (CATEGORICALS.has(columnProfile.colType)) {
+                displayColumns = optionColumns.filter(column =>
+                    NUMERICS.has(column.colType)
+                );
+            } else if (TIMESTAMPS.has(columnProfile.colType)) {
+                displayColumns = optionColumns.filter(column =>
+                    NUMERICS.has(column.colType)
+                );
+            } else {
+                displayColumns = [];
+            };
+        }
+    }
+
+    $: filterByType(filteringColumn?.column);
     $: displayColumns = optionColumns;
+
     let inputValue = '';
     let selectedColumn: ColumnProfileData;
     let showOptionMenu = false;
@@ -46,7 +78,9 @@
     <div
         class="dropdown-menu-container rounded border border-6 bg-gray-100 hover:border-gray-300"
         on:click={() => {
-            showOptionMenu = !showOptionMenu;
+            if (clickable) {
+                showOptionMenu = !showOptionMenu;
+            }
         }}
     >
         <div class="dropdown-menu-option pl-1" style="float:left;max-width:75%">
@@ -140,13 +174,14 @@
     }
 
     .bivariate-menu {
+        min-width: 45%;
         position: relative;
         display: flex;
         padding: 0.2em;
     }
 
     .dropdown-menu-container {
-        width: 50%;
+        width: 95%;
         position: relative;
         display: inline-block;
         height: 20px;

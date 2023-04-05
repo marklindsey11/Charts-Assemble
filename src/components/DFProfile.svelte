@@ -1,6 +1,6 @@
 <script lang="ts">
     import CollapsibleCard from './nav/CollapsibleCard.svelte';
-    import { createEventDispatcher, getContext } from 'svelte';
+    import { createEventDispatcher, getContext, setContext } from 'svelte';
     import ColumnProfile from './ColumnProfile.svelte';
     import ExpanderButton from './nav/ExpanderButton.svelte';
     import type {
@@ -19,6 +19,7 @@
     import DropdownMenu from './viz/bivariate/DropdownMenu.svelte';
     import Column from './viz/bivariate/Column.svelte';
     import AddVariable from './icons/AddVariable.svelte';
+    import Done from './icons/Done.svelte';
 
     export let dfName: string;
     export let dataframeProfile: IDFProfileWState;
@@ -27,6 +28,8 @@
     export let clickBivariateButton = false;
 
     const profileModel: ProfileModel = getContext('autoprofiler:profileModel');
+
+    $: setContext('variableFilterCondition', {});
 
     // locals
     $: warningMessage = _.isEmpty(dataframeProfile.warnings)
@@ -79,17 +82,32 @@
     function handleAggrType(event, i: number) {
         let timeOffsets = biDataStorage.map(d => d.timeOffset);
         let aggrType = event?.detail?.typ;
-        fetchBivariateData(dfName, xVariables[i].column, yVariables[i].column, aggrType,timeOffsets[i]).then(
-            biData => (biDataStorage[i] = biData)
-        );
+        fetchBivariateData(
+            dfName,
+            xVariables[i].column,
+            yVariables[i].column,
+            aggrType,
+            timeOffsets[i]
+        ).then(biData => (biDataStorage[i] = biData));
     }
 
-    function handleTimeOffset(event, i: number){
+    function handleTimeOffset(event, i: number) {
         let aggrTypes = biDataStorage.map(d => d.aggrType);
         let timeOffset = event?.detail?.timeOffset;
-        fetchBivariateData(dfName, xVariables[i].column, yVariables[i].column, aggrTypes[i],timeOffset).then(
-            biData => (biDataStorage[i] = biData)
-        );
+        fetchBivariateData(
+            dfName,
+            xVariables[i].column,
+            yVariables[i].column,
+            aggrTypes[i],
+            timeOffset
+        ).then(biData => (biDataStorage[i] = biData));
+    }
+
+    function handleDelete(event, i:number){
+        xVariables.splice(i,1);
+        yVariables.splice(i,1);
+        biDataStorage.splice(i,1);
+        updateBivariate();
     }
 
     // // AddButton version
@@ -108,8 +126,10 @@
             xVariable = event?.detail; // in the form of {"column":ColumnProfileData,"timestep":string}
         } else if (variable === 'y') {
             yVariable = event?.detail;
-        }
+        };
+    }
 
+    function sendToBivariate() {
         if (xSelected === true && ySelected === true) {
             // avoid generating charts of same x and y variables
             let duplicated = false;
@@ -127,7 +147,7 @@
                     xVariable.column,
                     yVariable.column,
                     'count',
-                    xVariable.timestep,
+                    xVariable.timestep
                 );
                 xVariables.push(xVariable);
                 yVariables.push(yVariable);
@@ -143,6 +163,7 @@
         }
     }
 
+
     function logAction(name: string) {
         profileModel.logger.log(name, { dfName });
     }
@@ -154,7 +175,7 @@
         xVariable: ColumnProfileData,
         yVariable: ColumnProfileData,
         aggrType: string,
-        timestep: string,
+        timestep: string
     ) {
         let biData;
         biData = await profileModel.getBivariateData(
@@ -164,7 +185,7 @@
             yVariable.colName,
             yVariable.colType,
             aggrType,
-            timestep,
+            timestep
         );
         return biData;
     }
@@ -178,7 +199,7 @@
                 xVariables[i].column,
                 yVariables[i].column,
                 aggrTypes[i],
-                xVariables[i].timestep,
+                xVariables[i].timestep
             );
         });
         Promise.all(biDataPromises).then(biDataArr => {
@@ -275,15 +296,17 @@
                 {/if}
                 <Tooltip location="right" alignment="center" distance={8}>
                     <button
-                        class={baseClasses + 'text-gray-400'}
-                        style="width: 24px; height: 24px;"
+                        class={baseClasses +
+                            'pl-2 pr-2 flex space-between gap-2 justify-between w-full ' +
+                            'text-gray-400'}
+                        style="width: 16px; height: 16px;"
                         on:click={handleBivariateButton}
                     >
-                        <BivariateButton size="24px" />
+                        <BivariateButton size="16px" />
                     </button>
 
                     <TooltipContent slot="tooltip-content">
-                        Bivariate Chart
+                        Add New Chart
                     </TooltipContent>
                 </Tooltip>
                 {#if !_.isUndefined(biDataPromise)}
@@ -291,7 +314,7 @@
                     {#await biDataPromise then biData}
                         {#each biDataStorage as previousBiData, idx}
                             <div
-                                class="pt-1 pb-1 pl-8 pr-4 w-full"
+                                class="pt-1 pb-1 pl-2 pr-4 w-full"
                                 bind:clientWidth={wrapperDivWidth}
                             >
                                 <BivariateChart
@@ -306,9 +329,10 @@
                                     }}
                                     on:selectTimeOffset={event => {
                                         handleTimeOffset(event, idx);
-                                    }
-                                
-                                    }
+                                    }}
+                                    on:delete={event => {
+                                        handleDelete(event,idx);
+                                    }}
                                 />
                             </div>
                         {/each}
@@ -316,28 +340,38 @@
                     {/await}
                 {/if}
                 {#if showBivariateMenu}
-                    <div class="flex pl-2 pr-2" style="flex-direction:column">
-                        <div style="width:100%">
-                            Create new bivariate chart:
-                        </div>
-                        <div>
+                    <div
+                        class="flex p-2 rounded bg-gray-50"
+                        style="flex-direction:column"
+                    >
+                        <div style="width:100%">Adding new chart</div>
+                        <div class="flex" style="flex-direction: row">
                             <DropdownMenu
-                                title={'Bivariate X: '}
+                                title={''}
                                 bind:selected={xSelected}
                                 bind:optionColumns={xOptionColumns}
                                 on:select={event => {
                                     handleBivariate(event, 'x');
                                 }}
+                                clickable={true}
                             />
                             <div class="grow" />
                             <DropdownMenu
-                                title={'Bivariate Y: '}
+                                title={''}
                                 bind:selected={ySelected}
                                 bind:optionColumns={yOptionColumns}
                                 on:select={event => {
                                     handleBivariate(event, 'y');
                                 }}
+                                bind:clickable={xSelected}
+                                bind:filteringColumn={xVariable}
                             />
+                        </div>
+                        <div class="flex">
+                            <div class="grow" />
+                            <button class="flex pr-2 text-gray-500 hover:bg-gray-100" on:click={sendToBivariate}>Done
+                            <Done/>
+                            </button>
                         </div>
                     </div>
                 {/if}
